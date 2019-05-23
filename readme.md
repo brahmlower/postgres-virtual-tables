@@ -49,21 +49,24 @@ Start the test datbase, then load the schema and test data
 
 ```
 docker-compose up -d
-psql -U test -h localhost test -c "\i deploy.sql"
-psql -U test -h localhost test -c "\i vtable_building.sql"
+PGPASSWORD=test psql -U test -h localhost test -c "\i deploy.sql"
+PGPASSWORD=test psql -U test -h localhost test -c "\i vtable_building.sql"
 ```
 
 If you need to reset everything, you can import the revert script (or just
 docker-compose down)
 
 ```
-psql -U test -h localhost test -c "\i revert.sql"
+PGPASSWORD=test psql -U test -h localhost test -c "\i revert.sql"
 ```
 
-The crosstab example I've been using to query the vtable:
+This is the crosstab query I've been using so far. It's not ideal, but has worked
+for basic testing. This also gives an example of what the vtable looks like (for
+easy comparison, the Burj Khalifa record is defined in the vtable_buildings.sql
+file)
 
 ```
-SELECT * FROM crosstab('
+test=# SELECT * FROM crosstab('
     select
         v.row_id,
         c.column_name,
@@ -80,6 +83,10 @@ SELECT * FROM crosstab('
     owner_id text,
     is_public text
 );
+ id |      name      | height |   city   |       country        | owner_id | is_public 
+----+----------------+--------+----------+----------------------+----------+-----------
+  1 | Shanghai Tower | 632    | Shanghai | China                | 0        | TRUE
+ 50 | Burj Khalifa   | 828    | Dubai    | United Arab Emirates | 0        | TRUE
 ```
 
 ## Continued research
