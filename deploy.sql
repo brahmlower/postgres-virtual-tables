@@ -49,7 +49,9 @@ CREATE OR REPLACE FUNCTION vtable_insert(
             END IF;
             -- Create a new row entry for the virtual table. The row_id value is
             -- determines based on existing row IDs in the vtable_cells table.
-            SELECT COALESCE(MAX(row_id), 0)+1 from vtable_cell where table_id = 100;
+            SELECT COALESCE(MAX(c.row_id), 0)+1 INTO row_id
+            FROM vtable_cell AS c
+            WHERE table_id = 100;
             -- Begin inserting each cell for the record
             FOR i IN 1 .. array_length(row_values, 1) LOOP
                 RAISE NOTICE 'Inserting (%, %, %, %)', target_table_id, row_id, col_id_array[i], row_values[i];
