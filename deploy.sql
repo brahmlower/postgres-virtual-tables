@@ -7,25 +7,20 @@ CREATE TABLE IF NOT EXISTS vtable_table(
 );
 
 CREATE TABLE IF NOT EXISTS vtable_column(
-    id              SERIAL PRIMARY KEY,
-    table_id        INTEGER REFERENCES vtable_table(id) NOT NULL,
-    column_name     TEXT NOT NULL,
-    column_type     TEXT NOT NULL,
-    column_position INTEGER NOT NULL,
+    id                  SERIAL PRIMARY KEY,
+    table_id            INTEGER REFERENCES vtable_table(id) NOT NULL,
+    column_name         TEXT NOT NULL,
+    column_type         TEXT NOT NULL,
+    column_references   TEXT,
+    column_position     INTEGER NOT NULL,
     CONSTRAINT unq_column_name UNIQUE (table_id, column_name),
     CONSTRAINT unq_column_position UNIQUE (table_id, column_position)
-);
-
-CREATE TABLE IF NOT EXISTS vtable_row(
-    id          SERIAL PRIMARY KEY,
-    table_id    INTEGER REFERENCES vtable_table(id) NOT NULL,
-    CONSTRAINT unq_overlapping_row UNIQUE (id, table_id)
 );
 
 CREATE TABLE IF NOT EXISTS vtable_cell(
     id          SERIAL PRIMARY KEY,
     table_id    INTEGER REFERENCES vtable_table(id) NOT NULL,
-    row_id      INTEGER REFERENCES vtable_row(id) NOT NULL,
+    row_id      INTEGER NOT NULL,
     column_id   INTEGER REFERENCES vtable_column(id) NOT NULL,
     cell_value  TEXT NOT NULL,
     CONSTRAINT unq_table_cell UNIQUE (table_id, row_id, column_id)
@@ -52,8 +47,9 @@ CREATE OR REPLACE FUNCTION vtable_insert(
             IF array_length(col_id_array, 1) != array_length(row_values, 1) THEN
                 RAISE EXCEPTION 'Incorrect number of values. Expected %, but got %', array_length(col_id_array, 1), array_length(row_values, 1);
             END IF;
-            -- Create a new row entry for the virtual table
-            INSERT INTO vtable_row (table_id) VALUES (target_table_id) RETURNING id INTO row_id;
+            -- Create a new row entry for the virtual table. The row_id value is
+            -- determines based on existing row IDs in the vtable_cells table.
+            SELECT COALESCE(MAX(row_id), 0)+1 from vtable_cell where table_id = 100;
             -- Begin inserting each cell for the record
             FOR i IN 1 .. array_length(row_values, 1) LOOP
                 RAISE NOTICE 'Inserting (%, %, %, %)', target_table_id, row_id, col_id_array[i], row_values[i];
@@ -149,22 +145,88 @@ CREATE OR REPLACE FUNCTION vtable_alter_add_column(
         END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION vtable_func_delete(
+        IN vtable_id INTEGER
+    ) RETURNS VOID
+    AS $$
+        DECLARE
+            func_name TEXT;
+        BEGIN
+            SELECT 'vtable_' || vtable_id::TEXT INTO func_name;
 
--- SELECT * FROM crosstab('
---     select
---         v.row_id,
---         c.column_name,
---         v.cell_value
---     from vtable_cell v
---     left join vtable_column c on v.column_id = c.id
---     order by row_id, c.column_position
--- ') AS catalog(
---     id integer,
---     vid text,
---     name text,
---     height text,
---     city text,
---     country text,
---     owner_id text,
---     is_public text
--- );
+            EXECUTE format(
+                $delete_func$
+                    DROP FUNCTION IF EXISTS pg_temp.%1$s;
+                $delete_func$,
+                func_name
+            );
+        END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_func_creator(
+        IN vtable_id INTEGER
+    ) RETURNS VOID
+    AS $$
+        DECLARE
+            creator_sql TEXT;
+            func_name TEXT;
+            func_body_raw TEXT;
+            func_body TEXT;
+            func_def TEXT;
+        BEGIN
+
+            -- Build the return type of the table that will be returned by the
+            -- crosstab call. Technically, we kinda already know this in the
+            -- function, but at the moment it's easier to rebuild this into a
+            -- string and then template it into the dynamic sql.
+            -- The 'id' column is added by the crosstab function itself. I could
+            -- probably find a way to prevent it from showing through, but it's
+            -- an easy unique primary key to use. They just wont be sequential
+            -- for a given virtual table. Because of this, I have to manually
+            -- specify that this column exists, since it's not represented in the
+            -- vtables_column table.
+            -- TODO: Investigate copying a table schema as a string
+            SELECT
+                'id integer, ' || string_agg(
+                    column_name || ' ' || column_type,
+                    ', '
+                    ORDER BY column_position
+                )
+            INTO func_def
+            FROM vtable_column AS c
+            WHERE c.table_id = vtable_id;
+
+            SELECT 'vtable_' || vtable_id::TEXT INTO func_name;
+
+            func_body_raw := $func_body$
+                BEGIN
+                    RETURN QUERY
+                    SELECT *
+                    FROM crosstab($query$
+                        SELECT
+                            v.row_id,
+                            c.column_name,
+                            v.cell_value
+                        FROM vtable_cell AS v
+                        LEFT JOIN vtable_column AS c ON v.column_id = c.id
+                        ORDER BY v.row_id, c.column_position
+                    $query$, $col_query$
+                        SELECT column_name
+                        FROM vtable_column
+                        WHERE table_id = %2$s
+                        ORDER BY column_position;
+                    $col_query$) AS catalog(%1$s);
+                END;
+            $func_body$;
+
+            func_body := format(func_body_raw, func_def, vtable_id);
+
+            creator_sql := $creator$
+                CREATE FUNCTION pg_temp.%1$s()
+                RETURNS TABLE (%2$s) AS %3$L
+                LANGUAGE plpgsql;
+            $creator$;
+
+            EXECUTE format(creator_sql, func_name, func_def, func_body);
+        END;
+$$ LANGUAGE plpgsql;
