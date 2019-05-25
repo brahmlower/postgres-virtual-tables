@@ -152,16 +152,35 @@ CREATE OR REPLACE FUNCTION vtable_func_delete(
     ) RETURNS VOID
     AS $$
         DECLARE
-            func_name TEXT;
+            func_name TEXT := vtable_get_func_name(vtable_id);
         BEGIN
-            SELECT 'vtable_' || vtable_id::TEXT INTO func_name;
-
             EXECUTE format(
                 $delete_func$
-                    DROP FUNCTION IF EXISTS pg_temp.%1$s;
+                    DROP FUNCTION IF EXISTS %1$s;
                 $delete_func$,
                 func_name
             );
+        END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_get_func_name(
+        IN vtable_id INTEGER
+    ) RETURNS TEXT
+    AS $$
+        BEGIN
+            RETURN 'vtable_' || vtable_id::TEXT;
+        END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_get_view_name(
+        IN vtable_id INTEGER,
+        OUT view_name TEXT
+    ) RETURNS TEXT
+    AS $$
+        BEGIN
+            SELECT table_name INTO view_name
+            FROM vtable_table
+            WHERE id = vtable_id;
         END;
 $$ LANGUAGE plpgsql;
 
@@ -171,7 +190,7 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
     AS $$
         DECLARE
             creator_sql TEXT;
-            func_name TEXT;
+            func_name TEXT := vtable_get_func_name(vtable_id);
             func_body_raw TEXT;
             func_body TEXT;
             func_def TEXT;
@@ -187,7 +206,7 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             -- an easy unique primary key to use. They just wont be sequential
             -- for a given virtual table. Because of this, I have to manually
             -- specify that this column exists, since it's not represented in the
-            -- vtables_column table.
+            -- vtable_column table.
             -- TODO: Investigate copying a table schema as a string
             SELECT
                 'id integer, ' || string_agg(
@@ -198,8 +217,6 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             INTO func_def
             FROM vtable_column AS c
             WHERE c.table_id = vtable_id;
-
-            SELECT 'vtable_' || vtable_id::TEXT INTO func_name;
 
             func_body_raw := $func_body$
                 BEGIN
@@ -226,7 +243,7 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             func_body := format(func_body_raw, func_def, vtable_id);
 
             creator_sql := $creator$
-                CREATE FUNCTION pg_temp.%1$s()
+                CREATE FUNCTION %1$s()
                 RETURNS TABLE (%2$s) AS %3$L
                 LANGUAGE plpgsql;
             $creator$;
@@ -234,3 +251,121 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             EXECUTE format(creator_sql, func_name, func_def, func_body);
         END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_view_delete(
+        IN vtable_id INTEGER
+    ) RETURNS VOID
+    AS $$
+        DECLARE
+            view_name TEXT := vtable_get_view_name(vtable_id);
+        BEGIN
+            EXECUTE format(
+                $delete_func$
+                    DROP VIEW IF EXISTS %1$s;
+                $delete_func$,
+                view_name
+            );
+        END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_view_creator(
+        IN vtable_id INTEGER
+    ) RETURNS VOID
+    AS $$
+        DECLARE
+            func_name TEXT := vtable_get_func_name(vtable_id);
+            view_name TEXT := vtable_get_view_name(vtable_id);
+        BEGIN
+            EXECUTE format(
+                $create_view$
+                    CREATE VIEW %1$s AS SELECT * FROM %2$s()
+                $create_view$,
+                view_name,
+                func_name
+            );
+        END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_access_rebuild(
+        IN table_id INTEGER
+    ) RETURNS VOID
+    AS $$
+        BEGIN
+            PERFORM vtable_view_delete(table_id);
+            PERFORM vtable_func_delete(table_id);
+            PERFORM vtable_func_creator(table_id);
+            PERFORM vtable_view_creator(table_id);
+        END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_trigger_on_insert(
+    ) RETURNS TRIGGER
+    AS $$
+        DECLARE
+            table_id INTEGER;
+        BEGIN
+            SELECT DISTINCT(inserted.table_id) INTO table_id
+            FROM inserted
+            LIMIT 1;
+            RAISE NOTICE 'Insert trigger, table_id: %', table_id;
+            PERFORM vtable_access_rebuild(table_id);
+            RETURN NEW;
+        END;
+$$ LANGUAGE plpgsql;
+
+-- CREATE OR REPLACE FUNCTION vtable_trigger_on_update(
+--     ) RETURNS TRIGGER
+--     AS $$
+--         DECLARE
+--             table_id INTEGER;
+--         BEGIN
+--             SELECT DISTINCT(updated.table_id) INTO table_id
+--             FROM updated
+--             LIMIT 1;
+--             IF table_id IS NULL THEN
+--                 RAISE EXCEPTION 'Failed to get table_id from updated record';
+--             END IF;
+--             RAISE NOTICE 'Update trigger, table_id: %', table_id;
+--             PERFORM vtable_access_rebuild(table_id);
+--             RETURN NEW;
+--         END;
+-- $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION vtable_trigger_on_delete(
+    ) RETURNS TRIGGER
+    AS $$
+        DECLARE
+            table_id INTEGER;
+        BEGIN
+            SELECT DISTINCT(removed.table_id) INTO table_id
+            FROM removed
+            LIMIT 1;
+            RAISE NOTICE 'Delete trigger, table_id: %', table_id;
+            PERFORM vtable_access_rebuild(table_id);
+            RETURN OLD;
+        END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS vtable_rebuild_on_insert ON vtable_column;
+CREATE TRIGGER vtable_rebuild_on_insert
+AFTER INSERT
+ON vtable_column
+REFERENCING NEW TABLE AS inserted
+FOR EACH STATEMENT
+EXECUTE PROCEDURE vtable_trigger_on_insert();
+
+-- DROP TRIGGER IF EXISTS vtable_rebuild_on_update ON vtable_column;
+-- CREATE TRIGGER vtable_rebuild_on_update
+-- AFTER UPDATE
+-- ON vtable_column
+-- REFERENCING NEW TABLE AS updated
+-- FOR EACH STATEMENT
+-- EXECUTE PROCEDURE vtable_trigger_on_update();
+
+DROP TRIGGER IF EXISTS vtable_rebuild_on_delete ON vtable_column;
+CREATE TRIGGER vtable_rebuild_on_delete
+AFTER DELETE
+ON vtable_column
+REFERENCING OLD TABLE AS removed
+FOR EACH STATEMENT
+EXECUTE PROCEDURE vtable_trigger_on_delete();
