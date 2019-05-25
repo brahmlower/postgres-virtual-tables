@@ -310,23 +310,23 @@ CREATE OR REPLACE FUNCTION vtable_trigger_on_insert(
         END;
 $$ LANGUAGE plpgsql;
 
--- CREATE OR REPLACE FUNCTION vtable_trigger_on_update(
---     ) RETURNS TRIGGER
---     AS $$
---         DECLARE
---             table_id INTEGER;
---         BEGIN
---             SELECT DISTINCT(updated.table_id) INTO table_id
---             FROM updated
---             LIMIT 1;
---             IF table_id IS NULL THEN
---                 RAISE EXCEPTION 'Failed to get table_id from updated record';
---             END IF;
---             RAISE NOTICE 'Update trigger, table_id: %', table_id;
---             PERFORM vtable_access_rebuild(table_id);
---             RETURN NEW;
---         END;
--- $$ LANGUAGE plpgsql;
+CREATE OR REPLACE FUNCTION vtable_trigger_on_update(
+    ) RETURNS TRIGGER
+    AS $$
+        DECLARE
+            table_id INTEGER;
+        BEGIN
+            SELECT DISTINCT(updated.table_id) INTO table_id
+            FROM updated
+            LIMIT 1;
+            IF table_id IS NULL THEN
+                RAISE EXCEPTION 'Failed to get table_id from updated record';
+            END IF;
+            RAISE NOTICE 'Update trigger, table_id: %', table_id;
+            PERFORM vtable_access_rebuild(table_id);
+            RETURN NEW;
+        END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION vtable_trigger_on_delete(
     ) RETURNS TRIGGER
@@ -351,13 +351,13 @@ REFERENCING NEW TABLE AS inserted
 FOR EACH STATEMENT
 EXECUTE PROCEDURE vtable_trigger_on_insert();
 
--- DROP TRIGGER IF EXISTS vtable_rebuild_on_update ON vtable_column;
--- CREATE TRIGGER vtable_rebuild_on_update
--- AFTER UPDATE
--- ON vtable_column
--- REFERENCING NEW TABLE AS updated
--- FOR EACH STATEMENT
--- EXECUTE PROCEDURE vtable_trigger_on_update();
+DROP TRIGGER IF EXISTS vtable_rebuild_on_update ON vtable_column;
+CREATE TRIGGER vtable_rebuild_on_update
+AFTER UPDATE
+ON vtable_column
+REFERENCING NEW TABLE AS updated
+FOR EACH STATEMENT
+EXECUTE PROCEDURE vtable_trigger_on_update();
 
 DROP TRIGGER IF EXISTS vtable_rebuild_on_delete ON vtable_column;
 CREATE TRIGGER vtable_rebuild_on_delete
