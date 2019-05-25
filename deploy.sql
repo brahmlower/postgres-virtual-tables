@@ -41,7 +41,7 @@ CREATE OR REPLACE FUNCTION vtable_insert(
             FROM (
                 SELECT id
                 FROM vtable_column
-                WHERE table_id = 100 ORDER BY column_position
+                WHERE table_id = target_table_id ORDER BY column_position
             ) col_ids;
             -- Check if the values given are equal to the length of the row.
             IF array_length(col_id_array, 1) != array_length(row_values, 1) THEN
@@ -51,7 +51,7 @@ CREATE OR REPLACE FUNCTION vtable_insert(
             -- determines based on existing row IDs in the vtable_cells table.
             SELECT COALESCE(MAX(c.row_id), 0)+1 INTO row_id
             FROM vtable_cell AS c
-            WHERE table_id = 100;
+            WHERE table_id = target_table_id;
             -- Begin inserting each cell for the record
             FOR i IN 1 .. array_length(row_values, 1) LOOP
                 RAISE NOTICE 'Inserting (%, %, %, %)', target_table_id, row_id, col_id_array[i], row_values[i];
@@ -176,6 +176,7 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             func_body TEXT;
             func_def TEXT;
         BEGIN
+            -- TODO: Validate that the provided vtable ID actually exists.
 
             -- Build the return type of the table that will be returned by the
             -- crosstab call. Technically, we kinda already know this in the
@@ -190,9 +191,9 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             -- TODO: Investigate copying a table schema as a string
             SELECT
                 'id integer, ' || string_agg(
-                    column_name || ' ' || column_type,
+                    c.column_name || ' ' || c.column_type,
                     ', '
-                    ORDER BY column_position
+                    ORDER BY c.column_position
                 )
             INTO func_def
             FROM vtable_column AS c
@@ -211,6 +212,7 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
                             v.cell_value
                         FROM vtable_cell AS v
                         LEFT JOIN vtable_column AS c ON v.column_id = c.id
+                        WHERE c.table_id = %2$s
                         ORDER BY v.row_id, c.column_position
                     $query$, $col_query$
                         SELECT column_name
