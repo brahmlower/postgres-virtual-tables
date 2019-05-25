@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS vtable_column(
     column_references   TEXT,
     column_position     INTEGER NOT NULL,
     CONSTRAINT unq_column_name UNIQUE (table_id, column_name),
-    CONSTRAINT unq_column_position UNIQUE (table_id, column_position)
+    CONSTRAINT unq_column_position UNIQUE (table_id, column_position),
+    CONSTRAINT non_zero_position CHECK(column_position > 0)
 );
 
 CREATE TABLE IF NOT EXISTS vtable_cell(
@@ -88,7 +89,10 @@ CREATE OR REPLACE FUNCTION vtable_alter_remove_column(
                 ORDER BY column_position
             ) col_ids;
             -- Update the column positions for the remaining columns on the table
+            -- Range is 1-N because it's used for an array index, which is 1-index
+            -- in postgres
             FOR i IN 1 .. array_length(col_id_array, 1) LOOP
+                -- RAISE NOTICE 'table %, id %, position %', target_table_id, col_id_array[i], i;
                 UPDATE vtable_column SET column_position = i WHERE id = col_id_array[i];
             END LOOP;
         END;
@@ -105,7 +109,6 @@ CREATE OR REPLACE FUNCTION vtable_alter_add_column(
             col_id_array INTEGER[];
             new_col_id INTEGER;
             new_col_id_array INTEGER[];
-            rev_new_col_id_array INTEGER[];
         BEGIN
             -- Select the IDs of the columns in order of their position
             SELECT array_agg(col_ids.id) INTO col_id_array
@@ -115,7 +118,9 @@ CREATE OR REPLACE FUNCTION vtable_alter_add_column(
                 WHERE table_id = target_table_id
                 ORDER BY column_position
             ) col_ids;
-            -- Create the record to represent the new column
+            -- Create the record to represent the new column. We've set it's
+            -- column position to be very large, so that it's likely after all
+            -- existing columns. The column position will be updated next.
             INSERT INTO vtable_column
                 (id, table_id, column_name, column_type, column_position)
             VALUES
@@ -123,26 +128,18 @@ CREATE OR REPLACE FUNCTION vtable_alter_add_column(
             RETURNING id INTO new_col_id;
             -- Calculate the new ordering for the columns
             new_col_id_array := array_cat(
-                array_append(col_id_array[:new_column_position], new_col_id),
+                array_append(col_id_array[:new_column_position-1], new_col_id),
                 col_id_array[new_column_position:]
             );
-            -- Now reverse the list becase we're adding a column so we need to
-            -- update the position values from the lastmost to the firstmost column
-            SELECT array_agg(foo.unnest) INTO rev_new_col_id_array
-            FROM (
-                SELECT unnest, ordinality
-                FROM unnest(new_col_id_array)
-                WITH ORDINALITY
-                ORDER BY ordinality DESC
-            ) foo;
-            -- debug
-            RAISE NOTICE 'List of column ids is %', rev_new_col_id_array;
+            -- RAISE NOTICE 'Looping on columns: %', new_col_id_array;
             -- Update the position value for each of the tables columns
-            FOR i IN 1 .. array_length(rev_new_col_id_array, 1) LOOP
-                RAISE NOTICE 'Updating column position for column %, with position %', rev_new_col_id_array[i], i;
+            -- Range is 1 through N because it's used for an array index, which
+            -- is 1-index in postgres
+            FOR i IN REVERSE array_length(new_col_id_array, 1) .. 1 LOOP
+                -- RAISE NOTICE 'Updating column position for column %, with position %', new_col_id_array[i], i;
                 UPDATE vtable_column
-                SET column_position = array_position(new_col_id_array, rev_new_col_id_array[i])
-                WHERE id = rev_new_col_id_array[i];
+                SET column_position = array_position(new_col_id_array, new_col_id_array[i])
+                WHERE id = new_col_id_array[i];
             END LOOP;
         END;
 $$ LANGUAGE plpgsql;
