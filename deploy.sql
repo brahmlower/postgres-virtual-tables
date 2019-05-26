@@ -3,7 +3,7 @@ CREATE EXTENSION tablefunc;
 
 CREATE TABLE IF NOT EXISTS vtable_table(
     id          SERIAL PRIMARY KEY,
-    table_name  TEXT NOT NULL
+    table_name  TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS vtable_column(
@@ -29,12 +29,12 @@ CREATE TABLE IF NOT EXISTS vtable_cell(
 
 CREATE OR REPLACE FUNCTION vtable_insert(
         IN target_table_id INTEGER,
-        IN row_values TEXT[]
-    ) RETURNS VOID
+        IN row_values TEXT[],
+        OUT row_id INTEGER
+    ) RETURNS INTEGER
     AS $$
         DECLARE
             col_id_array INTEGER[];
-            row_id INTEGER;
             i TEXT;
         BEGIN
             -- Get the IDs for the columns representing this row
