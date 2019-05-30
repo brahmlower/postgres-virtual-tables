@@ -1,4 +1,4 @@
-# Postgres Virtual Tables (testing)
+# Postgres Virtual Tables
 
 The idea is that users could "create a database table" without actually making a
 new table in the database. This will of course not be a perfect abstraction, but
@@ -8,15 +8,15 @@ virtual tables.
 Terminology is important for clear communication. Frequently used terms and their
 exacty meaning are listed here:
 
-table - A normal postgresql table
-column - A normal column on a postgres table
-vtable - A virtual table conceptually defined by data in postgres tables
-vcolumn - A column on the virtual table
+- table - A normal postgresql table
+- column - A normal column on a postgres table
+- vtable - A virtual table conceptually defined by data in postgres tables
+- vcolumn - A column on the virtual table
 
 ## Structure
 
-As of right now, there are four tables, two of which hold the definition for
-vtables and their structures, and two of which define data within the vtables.
+As of right now, there are three tables, two of which hold the definition for
+vtables and their structures, and third contains the data within the vtables.
 
 ### vtable_table
 
@@ -31,12 +31,6 @@ the column belongs to, the name of the vcolumn, and the ordering of the vcolumn.
 At this time there is a column called 'column_type', which would be used to
 define the type of data being stored, however this functionality has not been
 implemented yet.
-
-### vtable_row
-
-This table serves to identify a particular row in a vtable. The ID in a row here
-is referenced by records in the vtable_cell table to indicate what row the cell
-is part of.
 
 ### vtable_cell
 
@@ -66,14 +60,13 @@ This section will lightly detail how to use the tables and functions provided.
 Until the project reaches a mature state, this will be a mix of loose notes and
 reference for myself. Boring or inconsequential command output has been ommited.
 
-### Create vtable access function!
+### Manually create vtable access function!
 
-We can create a function (only a temporary functions) configured to show data
-from a specific vtable.
+We can create a function dynamically configured to show data from a specific vtable.
 
 ```
 test=# select vtable_func_creator(100);
-test=# select * from pg_temp.vtable_100();
+test=# select * from vtable_100();
  id |     name     | height | city  |       country        | owner_id | is_public 
 ----+--------------+--------+-------+----------------------+----------+-----------
  50 | Burj Khalifa |    828 | Dubai | United Arab Emirates |        0 | t
@@ -85,13 +78,34 @@ test=# select * from pg_temp.vtable_100();
 Create a view on top of the temporary vtable access function.
 
 ```
-test=# create view buildings as select * from pg_temp.vtable_100();
+test=# create view buildings as select * from vtable_100();
 test=# select * from buildings;
  id |     name     | height | city  |       country        | owner_id | is_public 
 ----+--------------+--------+-------+----------------------+----------+-----------
  50 | Burj Khalifa |    828 | Dubai | United Arab Emirates |        0 | t
 (1 row)
 ```
+
+### Creating functions and views the easy way
+
+Manually creating functions and views is only any good for testing. There's a function that will remove any existing access function and view for a given vtable, and create new ones (useful in cases where the vtable has been updated). But in our case, we can use it to create the functions and views for the first time:
+
+```
+test=# select * from buildings;
+ERROR:  relation "buildings" does not exist
+LINE 1: select * from buildings;
+                      ^
+test=# select vtable_access_rebuild(1);
+NOTICE:  view "buildings" does not exist, skipping
+NOTICE:  function vtable_1() does not exist, skipping
+ vtable_access_rebuild 
+-----------------------
+ 
+(1 row)
+test=# select * from buildings;
+...
+```
+
 
 ### Vtables preserve specified types!
 
@@ -138,6 +152,9 @@ CONTEXT:  PL/pgSQL function pg_temp_3.vtable_100() line 3 at RETURN QUERY
 ```
 
 #### Row locks, transactions, and alters oh my!
+
+**The documentation below is out of date as of 5/25/2019, and will be updated shortly
+to reflect new data access functions, views, and rebuild triggers.**
 
 Additionally, it's possible for the vtable to be altered while another session is
 open, at which point the existing temporary access functions will be broken. For
