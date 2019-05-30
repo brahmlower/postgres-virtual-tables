@@ -3,7 +3,7 @@ version: '3.7'
 
 services:
   db:
-    image: postgres
+    image: postgres:11.3
     restart: always
     environment:
       POSTGRES_DB: test

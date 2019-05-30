@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS vtable_cell(
     table_id    INTEGER REFERENCES vtable_table(id) NOT NULL,
     row_id      INTEGER NOT NULL,
     column_id   INTEGER REFERENCES vtable_column(id) NOT NULL,
-    cell_value  TEXT NOT NULL,
+    cell_value  TEXT,
     CONSTRAINT unq_table_cell UNIQUE (table_id, row_id, column_id)
 );
 
@@ -35,6 +35,7 @@ CREATE OR REPLACE FUNCTION vtable_insert(
     AS $$
         DECLARE
             col_id_array INTEGER[];
+            new_item INTEGER;
             i TEXT;
         BEGIN
             -- Get the IDs for the columns representing this row
@@ -59,7 +60,9 @@ CREATE OR REPLACE FUNCTION vtable_insert(
                 INSERT INTO vtable_cell
                     (id, table_id, row_id, column_id, cell_value)
                 VALUES
-                    (DEFAULT, target_table_id, row_id, col_id_array[i], row_values[i]);
+                    (DEFAULT, target_table_id, row_id, col_id_array[i], row_values[i])
+                RETURNING id INTO new_item;
+                RAISE NOTICE 'New cell row is: %', new_item;
             END LOOP;
         END;
 $$ LANGUAGE plpgsql;
@@ -222,11 +225,10 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
                     FROM crosstab($query$
                         SELECT
                             v.row_id,
-                            c.column_name,
+                            v.column_id,
                             v.cell_value
                         FROM vtable_cell AS v
-                        LEFT JOIN vtable_column AS c ON v.column_id = c.id
-                        WHERE c.table_id = %2$s
+                        WHERE v.table_id = %2$s
                         ORDER BY v.row_id, c.column_position
                     $query$, $col_query$
                         SELECT column_name
