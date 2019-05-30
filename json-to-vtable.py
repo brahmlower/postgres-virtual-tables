@@ -34,7 +34,7 @@ class Vtable(object):
             print('Reached row: {}'.format(row_id))
 
 def fetch_data():
-    response = subprocess.check_output(['./scratch/get-car-data.sh'], shell=True)
+    response = subprocess.check_output(['./scripts/get-car-data.sh'], shell=True)
     return json.loads(response)
 
 def load_data(file_path):
