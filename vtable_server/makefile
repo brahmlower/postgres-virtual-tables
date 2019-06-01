@@ -1,7 +1,7 @@
 
 .PHONY: run
 run:
-	gunicorn --bind 0.0.0.0:8000 'vtables_server:build_app()'
+	gunicorn --bind 0.0.0.0:8000 'vtable_server:build_app()'
 
 .PHONY: install
 install:
@@ -9,7 +9,7 @@ install:
 
 .PHONY: uninstall
 uninstall:
-	pip uninstall -y vtables_server .
+	pip uninstall -y vtable_server .
 
 .PHONY: reinstall
 reinstall: uninstall install
