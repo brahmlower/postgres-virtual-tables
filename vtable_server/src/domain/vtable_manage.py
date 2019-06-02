@@ -1,6 +1,7 @@
 
 from vtable_lib import simple as vt
 from ..errors import MissingRequiredKey
+from ..errors import ItemNotFound
 from ..errors import NotImplementedYet
 
 # Table crud
@@ -18,13 +19,15 @@ def create_vtable(db_session, create_dict):
 
 def get_vtable(db_session, table_id):
     result = vt.get_vtable(db_session, table_id)
+    if result is None:
+        raise ItemNotFound(table_id)
     return dict(result)
 
 def update_vtable(db_session, table_id, update_dict):
     try:
         result = vt.update_vtable(db_session, table_id, update_dict)
         return dict(result)
-    except ValueError as error:
+    except Exception as error:
         raise NotImplementedYet
 
 def delete_vtable(db_session, table_id):
@@ -51,13 +54,15 @@ def create_vtable_column(db_session, table_id, create_dict):
 
 def get_vtable_column(db_session, table_id, column_id):
     result = vt.get_vtable_column(db_session, table_id, column_id)
+    if result is None:
+        raise ItemNotFound(column_id) # TODO: It's unclear if the table_id is bad, or if the column_id is bad
     return dict(result)
 
 def update_vtable_column(db_session, table_id, column_id, update_dict):
     try:
         result = vt.update_vtable_column(db_session, table_id, column_id, update_dict)
         return dict(result)
-    except ValueError as error:
+    except Exception as error:
         raise NotImplementedYet
 
 def delete_vtable_column(db_session, table_id, column_id):

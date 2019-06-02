@@ -88,18 +88,14 @@ CREATE OR REPLACE FUNCTION vtable_alter_remove_column(
         DECLARE
             col_id_array INTEGER[];
         BEGIN
-            RAISE WARNING 'Starting delete column % from table %', target_column_id, target_table_id;
-            RAISE WARNING 'Deleting column from row data';
             -- Delete all data associated with the vtable for the specified column
             DELETE FROM vtable_cell
             WHERE   table_id = target_table_id
                 AND column_id = target_column_id;
-            RAISE WARNING 'Deleting column from column table';
             -- Delete the column from the specified table
             DELETE FROM vtable_column
             WHERE   table_id = target_table_id
                 AND id = target_column_id;
-            RAISE WARNING 'Calculating updated column positions';
             -- Select the IDs for the remaining columns in order of their position
             SELECT array_agg(col_ids.id) INTO col_id_array
             FROM (
@@ -111,9 +107,7 @@ CREATE OR REPLACE FUNCTION vtable_alter_remove_column(
             -- Update the column positions for the remaining columns on the table
             -- Range is 1-N because it's used for an array index, which is 1-index
             -- in postgres
-            RAISE WARNING 'Applying new column positions to remaining columns';
             FOR i IN 1 .. array_length(col_id_array, 1) LOOP
-                RAISE WARNING 'table %, id %, position %', target_table_id, col_id_array[i], i;
                 UPDATE vtable_column SET column_position = i WHERE id = col_id_array[i] AND column_position != i;
             END LOOP;
         END;
@@ -215,7 +209,6 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             func_body TEXT;
             func_def TEXT;
         BEGIN
-            RAISE WARNING 'Rebuilding func for %', vtable_id;
             -- TODO: Validate that the provided vtable ID actually exists.
 
             -- Build the return type of the table that will be returned by the
@@ -238,8 +231,6 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             INTO func_def
             FROM vtable_column AS c
             WHERE c.table_id = vtable_id;
-
-            RAISE WARNING 'Func type is: %', func_def;
 
             func_body_raw := $func_body$
                 BEGIN
@@ -318,6 +309,8 @@ CREATE OR REPLACE FUNCTION vtable_access_rebuild(
         BEGIN
             PERFORM vtable_view_delete(target_table_id);
             PERFORM vtable_func_delete(target_table_id);
+            -- If there are no more columns left, we don't need an an access
+            -- function or view, since the table cannot hold data
             SELECT count(*) INTO column_count FROM vtable_column WHERE table_id = target_table_id;
             IF column_count > 0 THEN
                 PERFORM vtable_func_creator(target_table_id);
@@ -351,10 +344,15 @@ CREATE OR REPLACE FUNCTION vtable_trigger_on_update(
             FROM updated
             LIMIT 1;
             IF table_id IS NULL THEN
-                RAISE EXCEPTION 'Failed to get table_id from updated record';
+                -- This happens when we run an update statement on the table but
+                -- none of the records meet the conditional. Therefore reaching
+                -- this state isn't considered and error, and hardly warrants a
+                -- warning. Setting to notice for now.
+                RAISE NOTICE 'Failed to get table_id from updated record';
+            ELSE
+                RAISE NOTICE 'Update trigger, table_id: %', table_id;
+                PERFORM vtable_access_rebuild(table_id);
             END IF;
-            RAISE NOTICE 'Update trigger, table_id: %', table_id;
-            PERFORM vtable_access_rebuild(table_id);
             RETURN NEW;
         END;
 $$ LANGUAGE plpgsql;

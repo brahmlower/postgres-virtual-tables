@@ -458,6 +458,58 @@
 			"response": []
 		},
 		{
+			"name": "Access: Get foobarbaz rows (expect zero)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Make sure there are zero rows', function() {",
+							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.length).to.eql(0);",
+							"})"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"access",
+						"{{foobar_table_id}}"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
 			"name": "Access: Create foobarbaz row 'qux'",
 			"event": [
 				{
@@ -565,7 +617,7 @@
 			"response": []
 		},
 		{
-			"name": "Access: Get foobarbaz rows",
+			"name": "Access: Get foobarbaz row 'corge' (verify id works)",
 			"event": [
 				{
 					"listen": "test",
@@ -574,7 +626,68 @@
 						"exec": [
 							"pm.test('Test response is okay', function() {",
 							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Verify corge record was created', function() {",
 							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    var corge_id = pm.globals.get(\"corge_row_id\");",
+							"    pm.expect(json_data.response.id).to.eql(corge_id);",
+							"})",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"foo\": \"bar\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}/{{corge_row_id}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"access",
+						"{{foobar_table_id}}",
+						"{{corge_row_id}}"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Access: Get foobarbaz rows (expect two)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Make sure there are two rows', function() {",
+							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.length).to.eql(2);",
 							"})"
 						]
 					}
@@ -669,7 +782,14 @@
 						"exec": [
 							"pm.test('Test response is okay', function() {",
 							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Make sure there are two rows', function() {",
 							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response).to.have.property('foo');",
+							"    pm.expect(json_data.response).to.not.have.property('bar');",
 							"})"
 						]
 					}

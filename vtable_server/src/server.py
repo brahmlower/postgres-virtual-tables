@@ -57,7 +57,8 @@ class VirtualTablesApi(Flask):
         self.app_config = app_config
         self.config['SQLALCHEMY_DATABASE_URI'] = self._get_db_uri()
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        self.db = SQLAlchemy(self, session_options={"autoflush": False})
+        # self.db = SQLAlchemy(self, session_options={"autoflush": False})
+        self.db = SQLAlchemy(self)
         self.Session = sessionmaker()
         self.Session.configure(bind=self.db.engine)
 
@@ -98,8 +99,8 @@ class VirtualTablesApi(Flask):
             response = response_from_error(error)
         else:
             response = response_with_payload(vtable_list)
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_create_table(self):
         create_dict = request.get_json()
@@ -116,8 +117,8 @@ class VirtualTablesApi(Flask):
         else:
             response = response_with_payload(new_table)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_get_table(self, table_id):
         session = self.Session()
@@ -131,8 +132,8 @@ class VirtualTablesApi(Flask):
             response = response_from_error(error)
         else:
             response = response_with_payload(vtable)
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_update_table(self, table_id):
         update_dict = request.get_json()
@@ -150,8 +151,8 @@ class VirtualTablesApi(Flask):
         else:
             response = response_with_payload(updated_table)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_delete_table(self, table_id):
         session = self.Session()
@@ -169,8 +170,8 @@ class VirtualTablesApi(Flask):
             # Just need some affirmative value. 'True' seems to fit the bill
             response = response_with_payload(True)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_get_columns(self, table_id):
         session = self.Session()
@@ -184,8 +185,8 @@ class VirtualTablesApi(Flask):
             response = response_from_error(error)
         else:
             response = response_with_payload(columns_list)
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_create_column(self, table_id):
         create_dict = request.get_json()
@@ -203,8 +204,8 @@ class VirtualTablesApi(Flask):
         else:
             response = response_with_payload(new_column)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_get_column(self, table_id, column_id):
         session = self.Session()
@@ -219,8 +220,8 @@ class VirtualTablesApi(Flask):
             response = response_from_error(error)
         else:
             response = response_with_payload(column)
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_update_column(self, table_id, column_id):
         update_dict = request.get_json()
@@ -239,8 +240,8 @@ class VirtualTablesApi(Flask):
         else:
             response = response_with_payload(updated_column)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_delete_column(self, table_id, column_id):
         session = self.Session()
@@ -259,8 +260,8 @@ class VirtualTablesApi(Flask):
             # Just need some affirmative value. 'True' seems to fit the bill
             response = response_with_payload(True)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     # Table access -------------------------------------------------------------
 
@@ -276,8 +277,8 @@ class VirtualTablesApi(Flask):
             response = response_from_error(error)
         else:
             response = response_with_payload(row_list)
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_create_row(self, table_id):
         create_dict = request.get_json()
@@ -286,14 +287,17 @@ class VirtualTablesApi(Flask):
             clean_table_id = int(table_id)
             new_row = access.create_row(session, clean_table_id, create_dict)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(new_row)
-        finally:
-            return response
+            session.commit()
+        session.close()
+        return response
 
     def api_get_row(self, table_id, row_id):
         session = self.Session()
@@ -302,17 +306,14 @@ class VirtualTablesApi(Flask):
             clean_row_id = int(row_id)
             row = access.get_row(session, clean_table_id, clean_row_id)
         except ServiceException as error:
-            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
-            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(row)
-            session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_update_row(self, table_id, row_id):
         update_dict = request.get_json()
@@ -331,8 +332,8 @@ class VirtualTablesApi(Flask):
         else:
             response = response_with_payload(updated_row)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response
 
     def api_delete_row(self, table_id, row_id):
         session = self.Session()
@@ -351,5 +352,5 @@ class VirtualTablesApi(Flask):
             # Just need some affirmative value. 'True' seems to fit the bill
             response = response_with_payload(True)
             session.commit()
-        finally:
-            return response
+        session.close()
+        return response

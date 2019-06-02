@@ -30,4 +30,8 @@ class MissingRequiredKey(ServiceException):
 
 class NotImplementedYet(ServiceException):
     def __init__(self):
-        super().__init__('This feature not implemented yet!')
+        super().__init__('This feature not implemented yet!', status=500)
+
+class ItemNotFound(ServiceException):
+    def __init__(self, item_id):
+        super().__init__('No item with id: {}'.format(item_id))

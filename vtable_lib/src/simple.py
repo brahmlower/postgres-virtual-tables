@@ -78,11 +78,13 @@ def create_row(db_session, table_id, create_dict):
          'table_id': table_id,
          'values': values
     }
-    return db_session.execute(query, params).fetchone()[0]
+    result = db_session.execute(query, params).fetchone()[0]
+    return result
 
 def get_row(db_session, table_id, row_id):
     query = text('SELECT * FROM vtable_{}() WHERE id = :row_id'.format(table_id))
-    return db_session.execute(query, {'row_id': row_id}).fetchone()
+    result = db_session.execute(query, {'row_id': row_id}).fetchone()
+    return result
 
 def update_row(db_session, table_id, row_id, update_dict):
     raise Exception

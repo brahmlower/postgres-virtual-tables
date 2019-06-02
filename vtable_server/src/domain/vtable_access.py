@@ -2,6 +2,7 @@
 from sqlalchemy.exc import InternalError
 from vtable_lib import simple as vt
 from ..errors import DatabaseError
+from ..errors import ItemNotFound
 from ..errors import NotImplementedYet
 
 # Vtable crud
@@ -19,12 +20,14 @@ def create_row(db_session, table_id, create_dict):
 
 def get_row(db_session, table_id, row_id):
     result = vt.get_row(db_session, table_id, row_id)
+    if result is None:
+        raise ItemNotFound(row_id)
     return dict(result)
 
 def update_row(db_session, table_id, row_id, update_dict):
     try:
         return vt.update_row(db_session, table_id, row_id, update_dict)
-    except ValueError as error:
+    except Exception as error:
         raise NotImplementedYet
 
 def delete_row(db_session, table_id, row_id):
