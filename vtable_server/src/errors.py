@@ -27,3 +27,7 @@ class ItemNotFound(ServiceException):
 class MissingRequiredKey(ServiceException):
     def __init__(self, key, type_='string'):
         super().__init__('Missing required key: {} (of type {})'.format(key, type_))
+
+class NotImplementedYet(ServiceException):
+    def __init__(self):
+        super().__init__('This feature not implemented yet!')

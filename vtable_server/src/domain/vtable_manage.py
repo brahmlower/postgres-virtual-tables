@@ -1,6 +1,7 @@
 
 from vtable_lib import simple as vt
 from ..errors import MissingRequiredKey
+from ..errors import NotImplementedYet
 
 # Table crud
 
@@ -20,8 +21,11 @@ def get_vtable(db_session, table_id):
     return dict(result)
 
 def update_vtable(db_session, table_id, update_dict):
-    result = vt.update_vtable(db_session, table_id, update_dict)
-    return dict(result)
+    try:
+        result = vt.update_vtable(db_session, table_id, update_dict)
+        return dict(result)
+    except ValueError as error:
+        raise NotImplementedYet
 
 def delete_vtable(db_session, table_id):
     return vt.delete_vtable(db_session, table_id)
@@ -50,8 +54,11 @@ def get_vtable_column(db_session, table_id, column_id):
     return dict(result)
 
 def update_vtable_column(db_session, table_id, column_id, update_dict):
-    result = vt.update_vtable_column(db_session, table_id, column_id, update_dict)
-    return dict(result)
+    try:
+        result = vt.update_vtable_column(db_session, table_id, column_id, update_dict)
+        return dict(result)
+    except ValueError as error:
+        raise NotImplementedYet
 
 def delete_vtable_column(db_session, table_id, column_id):
     return vt.delete_vtable_column(db_session, table_id, column_id)

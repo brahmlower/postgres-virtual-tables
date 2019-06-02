@@ -9,7 +9,7 @@ def list_vtables(db_session):
     return result.fetchall()
 
 def create_vtable(db_session, name):
-    query = text('INSERT INTO vtable_table (id, name) VALUES (DEFAULT, :name) RETURNING *')
+    query = text('INSERT INTO vtable_table (id, table_name) VALUES (DEFAULT, :name) RETURNING *')
     result = db_session.execute(query, {'name': name})
     return result.fetchone()
 
@@ -22,7 +22,9 @@ def update_vtable(db_session, table_id, update_dict):
     raise Exception
 
 def delete_vtable(db_session, table_id):
-    raise Exception
+    query = text('SELECT * FROM vtable_delete(:table_id)')
+    db_session.execute(query, {'table_id': table_id})
+    return None
 
 # Column crud ------------------------------------------------------------------
 

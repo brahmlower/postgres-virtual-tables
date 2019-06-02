@@ -107,19 +107,22 @@ class VirtualTablesApi(Flask):
         try:
             new_table = manage.create_vtable(session, create_dict)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(new_table)
+            session.commit()
         finally:
             return response
 
     def api_get_table(self, table_id):
-        clean_table_id = int(table_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
             vtable = manage.get_vtable(session, clean_table_id)
         except ServiceException as error:
             response = response_from_service_error(error)
@@ -133,40 +136,46 @@ class VirtualTablesApi(Flask):
 
     def api_update_table(self, table_id):
         update_dict = request.get_json()
-        clean_table_id = int(table_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
             updated_table = manage.update_vtable(session, clean_table_id, update_dict)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(updated_table)
+            session.commit()
         finally:
             return response
 
     def api_delete_table(self, table_id):
-        clean_table_id = int(table_id)
         session = self.Session()
         try:
-            _ = manage.delete_vtable(session, clean_table_id)
+            clean_table_id = int(table_id)
+            manage.delete_vtable(session, clean_table_id)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             # Just need some affirmative value. 'True' seems to fit the bill
             response = response_with_payload(True)
+            session.commit()
         finally:
             return response
 
     def api_get_columns(self, table_id):
-        clean_table_id = int(table_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
             columns_list = manage.list_vtable_columns(session, clean_table_id)
         except ServiceException as error:
             response = response_from_service_error(error)
@@ -179,26 +188,29 @@ class VirtualTablesApi(Flask):
             return response
 
     def api_create_column(self, table_id):
-        clean_table_id = int(table_id)
         create_dict = request.get_json()
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
             new_column = manage.create_vtable_column(session, clean_table_id, create_dict)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(new_column)
+            session.commit()
         finally:
             return response
 
     def api_get_column(self, table_id, column_id):
-        clean_table_id = int(table_id)
-        clean_column_id = int(column_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
+            clean_column_id = int(column_id)
             column = manage.get_vtable_column(session, clean_table_id, clean_column_id)
         except ServiceException as error:
             response = response_from_service_error(error)
@@ -212,44 +224,50 @@ class VirtualTablesApi(Flask):
 
     def api_update_column(self, table_id, column_id):
         update_dict = request.get_json()
-        clean_table_id = int(table_id)
-        clean_column_id = int(column_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
+            clean_column_id = int(column_id)
             updated_column = manage.update_vtable_column(session, clean_table_id, clean_column_id, update_dict)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(updated_column)
+            session.commit()
         finally:
             return response
 
     def api_delete_column(self, table_id, column_id):
-        clean_table_id = int(table_id)
-        clean_column_id = int(column_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
+            clean_column_id = int(column_id)
             manage.delete_vtable_column(session, clean_table_id, clean_column_id)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             # Just need some affirmative value. 'True' seems to fit the bill
             response = response_with_payload(True)
+            session.commit()
         finally:
             return response
 
     # Table access -------------------------------------------------------------
 
     def api_list_rows(self, table_id):
-        clean_table_id = int(table_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
             row_list = access.list_rows(session, clean_table_id)
         except ServiceException as error:
             response = response_from_service_error(error)
@@ -263,9 +281,9 @@ class VirtualTablesApi(Flask):
 
     def api_create_row(self, table_id):
         create_dict = request.get_json()
-        clean_table_id = int(table_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
             new_row = access.create_row(session, clean_table_id, create_dict)
         except ServiceException as error:
             response = response_from_service_error(error)
@@ -278,51 +296,60 @@ class VirtualTablesApi(Flask):
             return response
 
     def api_get_row(self, table_id, row_id):
-        clean_table_id = int(table_id)
-        clean_row_id = int(row_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
+            clean_row_id = int(row_id)
             row = access.get_row(session, clean_table_id, clean_row_id)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(row)
+            session.commit()
         finally:
             return response
 
     def api_update_row(self, table_id, row_id):
         update_dict = request.get_json()
-        clean_table_id = int(table_id)
-        clean_row_id = int(row_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
+            clean_row_id = int(row_id)
             updated_row = access.update_row(session, clean_table_id, clean_row_id, update_dict)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             response = response_with_payload(updated_row)
+            session.commit()
         finally:
             return response
 
     def api_delete_row(self, table_id, row_id):
-        clean_table_id = int(table_id)
-        clean_row_id = int(row_id)
         session = self.Session()
         try:
+            clean_table_id = int(table_id)
+            clean_row_id = int(row_id)
             access.delete_row(session, clean_table_id, clean_row_id)
         except ServiceException as error:
+            session.rollback()
             response = response_from_service_error(error)
         except Exception as error:
+            session.rollback()
             traceback.print_exc()
             response = response_from_error(error)
         else:
             # Just need some affirmative value. 'True' seems to fit the bill
             response = response_with_payload(True)
+            session.commit()
         finally:
             return response

@@ -67,6 +67,19 @@ CREATE OR REPLACE FUNCTION vtable_insert(
         END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION vtable_delete(
+        IN target_table_id INTEGER
+    ) RETURNS VOID
+    AS $$
+        BEGIN
+            PERFORM vtable_view_delete(target_table_id);
+            PERFORM vtable_func_delete(target_table_id);
+            DELETE FROM vtable_cell WHERE table_id = target_table_id;
+            DELETE FROM vtable_column WHERE table_id = target_table_id;
+            DELETE FROM vtable_table WHERE id = target_table_id;
+        END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION vtable_alter_remove_column(
         IN target_table_id INTEGER,
         IN target_column_id INTEGER
@@ -75,14 +88,18 @@ CREATE OR REPLACE FUNCTION vtable_alter_remove_column(
         DECLARE
             col_id_array INTEGER[];
         BEGIN
+            RAISE WARNING 'Starting delete column % from table %', target_column_id, target_table_id;
+            RAISE WARNING 'Deleting column from row data';
             -- Delete all data associated with the vtable for the specified column
             DELETE FROM vtable_cell
             WHERE   table_id = target_table_id
                 AND column_id = target_column_id;
+            RAISE WARNING 'Deleting column from column table';
             -- Delete the column from the specified table
             DELETE FROM vtable_column
             WHERE   table_id = target_table_id
                 AND id = target_column_id;
+            RAISE WARNING 'Calculating updated column positions';
             -- Select the IDs for the remaining columns in order of their position
             SELECT array_agg(col_ids.id) INTO col_id_array
             FROM (
@@ -94,9 +111,10 @@ CREATE OR REPLACE FUNCTION vtable_alter_remove_column(
             -- Update the column positions for the remaining columns on the table
             -- Range is 1-N because it's used for an array index, which is 1-index
             -- in postgres
+            RAISE WARNING 'Applying new column positions to remaining columns';
             FOR i IN 1 .. array_length(col_id_array, 1) LOOP
-                -- RAISE NOTICE 'table %, id %, position %', target_table_id, col_id_array[i], i;
-                UPDATE vtable_column SET column_position = i WHERE id = col_id_array[i];
+                RAISE WARNING 'table %, id %, position %', target_table_id, col_id_array[i], i;
+                UPDATE vtable_column SET column_position = i WHERE id = col_id_array[i] AND column_position != i;
             END LOOP;
         END;
 $$ LANGUAGE plpgsql;
@@ -197,6 +215,7 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             func_body TEXT;
             func_def TEXT;
         BEGIN
+            RAISE WARNING 'Rebuilding func for %', vtable_id;
             -- TODO: Validate that the provided vtable ID actually exists.
 
             -- Build the return type of the table that will be returned by the
@@ -220,6 +239,8 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
             FROM vtable_column AS c
             WHERE c.table_id = vtable_id;
 
+            RAISE WARNING 'Func type is: %', func_def;
+
             func_body_raw := $func_body$
                 BEGIN
                     RETURN QUERY
@@ -227,10 +248,11 @@ CREATE OR REPLACE FUNCTION vtable_func_creator(
                     FROM crosstab($query$
                         SELECT
                             v.row_id,
-                            v.column_id,
+                            c.column_name,
                             v.cell_value
                         FROM vtable_cell AS v
-                        WHERE v.table_id = %2$s
+                        LEFT JOIN vtable_column AS c ON v.column_id = c.id
+                        WHERE c.table_id = %2$s
                         ORDER BY v.row_id, c.column_position
                     $query$, $col_query$
                         SELECT column_name
@@ -288,14 +310,19 @@ CREATE OR REPLACE FUNCTION vtable_view_creator(
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION vtable_access_rebuild(
-        IN table_id INTEGER
+        IN target_table_id INTEGER
     ) RETURNS VOID
     AS $$
+        DECLARE
+            column_count INTEGER;
         BEGIN
-            PERFORM vtable_view_delete(table_id);
-            PERFORM vtable_func_delete(table_id);
-            PERFORM vtable_func_creator(table_id);
-            PERFORM vtable_view_creator(table_id);
+            PERFORM vtable_view_delete(target_table_id);
+            PERFORM vtable_func_delete(target_table_id);
+            SELECT count(*) INTO column_count FROM vtable_column WHERE table_id = target_table_id;
+            IF column_count > 0 THEN
+                PERFORM vtable_func_creator(target_table_id);
+                PERFORM vtable_view_creator(target_table_id);
+            END IF;
         END;
 $$ LANGUAGE plpgsql;
 

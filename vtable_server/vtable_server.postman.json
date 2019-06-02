@@ -7,16 +7,22 @@
 	},
 	"item": [
 		{
-			"name": "Manage: List Vtables",
+			"name": "Manage: List tables",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"type": "text/javascript",
 						"exec": [
-							"pm.test('Test response is okay', function() {",
+							"pm.test('Response is okay', function() {",
 							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('No existing virtual tables', function() {",
 							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.length).to.eql(0);",
 							"})"
 						]
 					}
@@ -27,12 +33,12 @@
 				"header": [],
 				"body": {},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables",
+					"raw": "http://localhost:{{port}}/api/manage/tables",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
@@ -44,7 +50,7 @@
 			"response": []
 		},
 		{
-			"name": "Manage: Create Vtable",
+			"name": "Manage: Create foobar",
 			"event": [
 				{
 					"listen": "test",
@@ -53,8 +59,16 @@
 						"exec": [
 							"pm.test('Test response is okay', function() {",
 							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Only have 1 vtable', function() {",
 							"    pm.response.to.be.json;",
-							"})"
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.table_name).to.eql(\"foobar\");",
+							"    pm.globals.set(\"foobar_table_id\", json_data.response.id);",
+							"})",
+							""
 						]
 					}
 				}
@@ -69,15 +83,15 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"foo\": \"bar\"\n}"
+					"raw": "{\n\t\"name\": \"foobar\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables",
+					"raw": "http://localhost:{{port}}/api/manage/tables",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
@@ -89,7 +103,7 @@
 			"response": []
 		},
 		{
-			"name": "Manage: Get Vtable 1",
+			"name": "Manage: Get foobar table",
 			"event": [
 				{
 					"listen": "test",
@@ -118,17 +132,17 @@
 					"raw": "{\n\t\"foo\": \"bar\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1",
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
 						"tables",
-						"1"
+						"{{foobar_table_id}}"
 					]
 				},
 				"description": ""
@@ -136,7 +150,7 @@
 			"response": []
 		},
 		{
-			"name": "Manage: Update Vtable 1",
+			"name": "Manage: Update foobar table name",
 			"event": [
 				{
 					"listen": "test",
@@ -161,20 +175,20 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"foo\": \"bar\"\n}"
+					"raw": "{\n\t\"name\": \"foobarbaz\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1",
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
 						"tables",
-						"1"
+						"{{foobar_table_id}}"
 					]
 				},
 				"description": ""
@@ -182,7 +196,7 @@
 			"response": []
 		},
 		{
-			"name": "Manage: Delete Vtable 1",
+			"name": "Manage: Create foobarbaz column 'foo'",
 			"event": [
 				{
 					"listen": "test",
@@ -192,102 +206,15 @@
 							"pm.test('Test response is okay', function() {",
 							"    pm.response.to.have.status(200);",
 							"    pm.response.to.be.json;",
-							"})"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "DELETE",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"disabled": true
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": ""
-				},
-				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8000",
-					"path": [
-						"api",
-						"manage",
-						"tables",
-						"1"
-					]
-				},
-				"description": ""
-			},
-			"response": []
-		},
-		{
-			"name": "Manage: Get Vtable 1 Columns",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"pm.test('Test response is okay', function() {",
-							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Create the foo column', function() {",
 							"    pm.response.to.be.json;",
-							"})"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"disabled": true
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": ""
-				},
-				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1/columns",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8000",
-					"path": [
-						"api",
-						"manage",
-						"tables",
-						"1",
-						"columns"
-					]
-				},
-				"description": ""
-			},
-			"response": []
-		},
-		{
-			"name": "Manage: Create Vtable 1 Column",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"pm.test('Test response is okay', function() {",
-							"    pm.response.to.have.status(200);",
-							"    pm.response.to.be.json;",
-							"})"
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.column_name).to.eql(\"foo\");",
+							"})",
+							""
 						]
 					}
 				}
@@ -305,17 +232,17 @@
 					"raw": "{\n\t\"name\": \"foo\",\n\t\"type\": \"text\",\n\t\"position\": 3\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1/columns",
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}/columns",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
 						"tables",
-						"1",
+						"{{foobar_table_id}}",
 						"columns"
 					]
 				},
@@ -324,7 +251,117 @@
 			"response": []
 		},
 		{
-			"name": "Manage: Get Vtable 1 Column 1",
+			"name": "Manage: Create foobarbaz column 'bar'",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Create the foo column and register its ID', function() {",
+							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.column_name).to.eql(\"bar\");",
+							"    pm.globals.set(\"bar_column_id\", json_data.response.id);",
+							"})",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"name\": \"bar\",\n\t\"type\": \"text\",\n\t\"position\": 3\n}"
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}/columns",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"manage",
+						"tables",
+						"{{foobar_table_id}}",
+						"columns"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Manage: Get foobarbaz columns",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Only have 1 vtable', function() {",
+							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.length).to.eql(2);",
+							"})",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}/columns",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"manage",
+						"tables",
+						"{{foobar_table_id}}",
+						"columns"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Manage: Get foobarbaz column 'bar'",
 			"event": [
 				{
 					"listen": "test",
@@ -353,19 +390,19 @@
 					"raw": "{\n\t\"foo\": \"bar\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1/columns/1",
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}/columns/{{bar_column_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
 						"tables",
-						"1",
+						"{{foobar_table_id}}",
 						"columns",
-						"1"
+						"{{bar_column_id}}"
 					]
 				},
 				"description": ""
@@ -373,7 +410,7 @@
 			"response": []
 		},
 		{
-			"name": "Manage: Update Vtable 1 Column 1",
+			"name": "Manage: Update foobarbaz column 'bar' to 'baz'",
 			"event": [
 				{
 					"listen": "test",
@@ -401,19 +438,19 @@
 					"raw": "{\n\t\"foo\": \"bar\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1/columns/1",
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}/columns/{{bar_column_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
 						"tables",
-						"1",
+						"{{foobar_table_id}}",
 						"columns",
-						"1"
+						"{{bar_column_id}}"
 					]
 				},
 				"description": ""
@@ -421,7 +458,160 @@
 			"response": []
 		},
 		{
-			"name": "Manage: Delete Vtable 1 Column 1",
+			"name": "Access: Create foobarbaz row 'qux'",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"    pm.response.to.be.json;",
+							"})",
+							"",
+							"pm.test('Create new row', function() {",
+							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.foo).to.eql(\"qux\");",
+							"    pm.expect(json_data.response.bar).to.eql(\"quux\");",
+							"})",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"foo\": \"qux\",\n\t\"bar\": \"quux\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"access",
+						"{{foobar_table_id}}"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Access: Create foobarbaz row 'corge'",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"})",
+							"",
+							"pm.test('Verify corge record was created', function() {",
+							"    pm.response.to.be.json;",
+							"    var json_data = pm.response.json();",
+							"    pm.expect(json_data.success).to.be.true;",
+							"    pm.expect(json_data.response.foo).to.eql(\"corge\");",
+							"    pm.globals.set(\"corge_row_id\", json_data.response.id);",
+							"})",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"foo\": \"corge\",\n\t\"bar\": \"grault\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"access",
+						"{{foobar_table_id}}"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Access: Get foobarbaz rows",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"    pm.response.to.be.json;",
+							"})"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"access",
+						"{{foobar_table_id}}"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Manage: Delete foobarbaz column 'bar'",
 			"event": [
 				{
 					"listen": "test",
@@ -450,19 +640,19 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/manage/tables/1/columns/1",
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}/columns/{{bar_column_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"manage",
 						"tables",
-						"1",
+						"{{foobar_table_id}}",
 						"columns",
-						"1"
+						"{{bar_column_id}}"
 					]
 				},
 				"description": ""
@@ -470,98 +660,7 @@
 			"response": []
 		},
 		{
-			"name": "Access: Get Vtable 1 Rows",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"pm.test('Test response is okay', function() {",
-							"    pm.response.to.have.status(200);",
-							"    pm.response.to.be.json;",
-							"})"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json",
-						"disabled": true
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": ""
-				},
-				"url": {
-					"raw": "http://localhost:8000/api/access/1",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8000",
-					"path": [
-						"api",
-						"access",
-						"1"
-					]
-				},
-				"description": ""
-			},
-			"response": []
-		},
-		{
-			"name": "Access: Create Vtable 1 Row",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"pm.test('Test response is okay', function() {",
-							"    pm.response.to.have.status(200);",
-							"    pm.response.to.be.json;",
-							"})"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n\t\"param1\": \"foo\",\n\t\"param2\": \"bar\",\n\t\"param3\": \"baz\",\n\t\"param4\": \"qux\",\n\t\"param5\": \"quux\",\n\t\"param6\": \"corge\"\n}"
-				},
-				"url": {
-					"raw": "http://localhost:8000/api/access/1",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8000",
-					"path": [
-						"api",
-						"access",
-						"1"
-					]
-				},
-				"description": ""
-			},
-			"response": []
-		},
-		{
-			"name": "Access: Get Vtable 1 Row 1",
+			"name": "Access: Get foobarbaz row 'corge' (verify column gone)",
 			"event": [
 				{
 					"listen": "test",
@@ -590,17 +689,17 @@
 					"raw": "{\n\t\"foo\": \"bar\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/access/1/1",
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}/{{corge_row_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"access",
-						"1",
-						"1"
+						"{{foobar_table_id}}",
+						"{{corge_row_id}}"
 					]
 				},
 				"description": ""
@@ -608,7 +707,7 @@
 			"response": []
 		},
 		{
-			"name": "Access: Update Vtable 1 Row 1",
+			"name": "Access: Update foobarbaz row 'corge' value",
 			"event": [
 				{
 					"listen": "test",
@@ -636,17 +735,17 @@
 					"raw": "{\n\t\"foo\": \"bar\"\n}"
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/access/1/1",
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}/{{corge_row_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"access",
-						"1",
-						"1"
+						"{{foobar_table_id}}",
+						"{{corge_row_id}}"
 					]
 				},
 				"description": ""
@@ -654,7 +753,7 @@
 			"response": []
 		},
 		{
-			"name": "Access: Delete Vtable 1 Row 1",
+			"name": "Access: Delete foobarbaz row 'corge'",
 			"event": [
 				{
 					"listen": "test",
@@ -683,17 +782,110 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "http://localhost:8000/api/access/1/1",
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}/{{corge_row_id}}",
 					"protocol": "http",
 					"host": [
 						"localhost"
 					],
-					"port": "8000",
+					"port": "{{port}}",
 					"path": [
 						"api",
 						"access",
-						"1",
-						"1"
+						"{{foobar_table_id}}",
+						"{{corge_row_id}}"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Access: Get foobarbaz rows (verify after delete)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"    pm.response.to.be.json;",
+							"})"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/access/{{foobar_table_id}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"access",
+						"{{foobar_table_id}}"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Manage: Delete foobarbaz table",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Test response is okay', function() {",
+							"    pm.response.to.have.status(200);",
+							"    pm.response.to.be.json;",
+							"})"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:{{port}}/api/manage/tables/{{foobar_table_id}}",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "{{port}}",
+					"path": [
+						"api",
+						"manage",
+						"tables",
+						"{{foobar_table_id}}"
 					]
 				},
 				"description": ""

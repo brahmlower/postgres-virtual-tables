@@ -1,0 +1,13 @@
+
+version: '3.7'
+
+services:
+  db:
+    image: postgres:11.3
+    restart: always
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: test
+    ports:
+      - 2345:5432

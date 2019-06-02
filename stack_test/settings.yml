@@ -1,0 +1,6 @@
+db:
+  hostname: localhost
+  database: test
+  username: test
+  password: test
+  port: 2345
