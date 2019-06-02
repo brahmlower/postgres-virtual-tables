@@ -106,7 +106,7 @@ CREATE OR REPLACE FUNCTION vtable_alter_add_column(
         IN new_column_name TEXT,
         IN new_column_type TEXT,
         IN new_column_position INTEGER
-    ) RETURNS VOID
+    ) RETURNS SETOF vtable_column
     AS $$
         DECLARE
             col_id_array INTEGER[];
@@ -144,6 +144,8 @@ CREATE OR REPLACE FUNCTION vtable_alter_add_column(
                 SET column_position = array_position(new_col_id_array, new_col_id_array[i])
                 WHERE id = new_col_id_array[i];
             END LOOP;
+            -- Now get the new column we added
+            RETURN QUERY SELECT * FROM vtable_column WHERE id = new_col_id;
         END;
 $$ LANGUAGE plpgsql;
 

@@ -302,7 +302,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"foo\": \"bar\"\n}"
+					"raw": "{\n\t\"name\": \"foo\",\n\t\"type\": \"text\",\n\t\"position\": 3\n}"
 				},
 				"url": {
 					"raw": "http://localhost:8000/api/manage/tables/1/columns",
@@ -541,7 +541,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"foo\": \"bar\"\n}"
+					"raw": "{\n\t\"param1\": \"foo\",\n\t\"param2\": \"bar\",\n\t\"param3\": \"baz\",\n\t\"param4\": \"qux\",\n\t\"param5\": \"quux\",\n\t\"param6\": \"corge\"\n}"
 				},
 				"url": {
 					"raw": "http://localhost:8000/api/access/1",

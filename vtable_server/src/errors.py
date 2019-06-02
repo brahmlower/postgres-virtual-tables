@@ -23,3 +23,7 @@ class DatabaseError(ServiceException):
 class ItemNotFound(ServiceException):
     def __init__(self, item_id):
         super().__init__('Could not find item with id {}'.format(item_id))
+
+class MissingRequiredKey(ServiceException):
+    def __init__(self, key, type_='string'):
+        super().__init__('Missing required key: {} (of type {})'.format(key, type_))

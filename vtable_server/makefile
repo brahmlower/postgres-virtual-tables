@@ -3,6 +3,10 @@
 run:
 	gunicorn --bind 0.0.0.0:8000 'vtable_server:build_app()'
 
+.PHONY: run-dev
+run-dev:
+	gunicorn --bind 0.0.0.0:8000 'src:build_app()'
+
 .PHONY: install
 install:
 	pip install .
