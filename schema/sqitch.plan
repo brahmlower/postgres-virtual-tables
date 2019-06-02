@@ -1,0 +1,4 @@
+%syntax-version=1.0.0
+%project=vtable
+%uri=https://github.com/bplower/postgres-virtual-tables
+
