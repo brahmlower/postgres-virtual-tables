@@ -11,7 +11,7 @@ setup(
     package_dir = {'vtable_server': 'src'},
     install_requires = [
         'Flask==1.0.2',
-        'PyYAML==3.13',
+        'PyYAML>=4.2b1',
         'psycopg2-binary==2.7.7',
         'flask-sqlalchemy==2.3.2',
         'requests==2.21.0',

@@ -12,6 +12,7 @@ sleep 4
 PGPASSWORD=test psql -U test -h localhost -p 2345 test -c "\i ../deploy.sql"
 
 # Run the server
+# cd ../vtable_server && GUNICORN_CMD_ARGS="--access-logfile '-' --log-level DEBUG" gunicorn --bind 0.0.0.0:8765 'vtable_server:build_app("../stack_test/settings.yml")' &> ../stack_test/vtable_server.log &
 cd ../vtable_server && GUNICORN_CMD_ARGS="--access-logfile '-' --log-level DEBUG" gunicorn --bind 0.0.0.0:8765 'src:build_app("../stack_test/settings.yml")' &> ../stack_test/vtable_server.log &
 
 # Start the tests
