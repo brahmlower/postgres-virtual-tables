@@ -2,3 +2,6 @@
 %project=vtable
 %uri=https://github.com/bplower/postgres-virtual-tables
 
+tables 2019-06-02T23:16:20Z Brahm Lower <contact@brahmlower.io> # Add bare bones tables
+functions 2019-06-02T23:28:41Z Brahm Lower <contact@brahmlower.io> # Addeds utility functions for virtual tables
+triggers 2019-06-02T23:35:29Z Brahm Lower <contact@brahmlower.io> # Add function rebuild triggers to column table

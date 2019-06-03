@@ -20,7 +20,7 @@ until pg_isready --quiet -p 2345 -h localhost; do
 done
 
 # Schema and function setup
-PGPASSWORD=test psql -U test -h localhost -p 2345 test -c "\i $GIT_ROOT/deploy.sql"
+cd $GIT_ROOT/schema && sqitch deploy db:pg://test:test@localhost:2345/test
 
 # Run the server
 # cd $GIT_ROOT/vtable_server && GUNICORN_CMD_ARGS="--access-logfile '-' --log-level DEBUG" gunicorn --bind 0.0.0.0:8765 "vtable_server:build_app(\"$SERVER_SETTINGS\")" &> $LOGFILE_SERVER &

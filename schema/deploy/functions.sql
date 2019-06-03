@@ -1,31 +1,8 @@
+-- Deploy vtable:functions to pg
+
+BEGIN;
 
 CREATE EXTENSION tablefunc;
-
-CREATE TABLE IF NOT EXISTS vtable_table(
-    id          SERIAL PRIMARY KEY,
-    table_name  TEXT NOT NULL UNIQUE
-);
-
-CREATE TABLE IF NOT EXISTS vtable_column(
-    id                  SERIAL PRIMARY KEY,
-    table_id            INTEGER REFERENCES vtable_table(id) NOT NULL,
-    column_name         TEXT NOT NULL,
-    column_type         TEXT NOT NULL,
-    column_references   TEXT,
-    column_position     INTEGER NOT NULL,
-    CONSTRAINT unq_column_name UNIQUE (table_id, column_name),
-    CONSTRAINT unq_column_position UNIQUE (table_id, column_position),
-    CONSTRAINT non_zero_position CHECK(column_position > 0)
-);
-
-CREATE TABLE IF NOT EXISTS vtable_cell(
-    id          SERIAL PRIMARY KEY,
-    table_id    INTEGER REFERENCES vtable_table(id) NOT NULL,
-    row_id      INTEGER NOT NULL,
-    column_id   INTEGER REFERENCES vtable_column(id) NOT NULL,
-    cell_value  TEXT,
-    CONSTRAINT unq_table_cell UNIQUE (table_id, row_id, column_id)
-);
 
 CREATE OR REPLACE FUNCTION vtable_insert(
         IN target_table_id INTEGER,
@@ -372,26 +349,4 @@ CREATE OR REPLACE FUNCTION vtable_trigger_on_delete(
         END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS vtable_rebuild_on_insert ON vtable_column;
-CREATE TRIGGER vtable_rebuild_on_insert
-AFTER INSERT
-ON vtable_column
-REFERENCING NEW TABLE AS inserted
-FOR EACH STATEMENT
-EXECUTE PROCEDURE vtable_trigger_on_insert();
-
-DROP TRIGGER IF EXISTS vtable_rebuild_on_update ON vtable_column;
-CREATE TRIGGER vtable_rebuild_on_update
-AFTER UPDATE
-ON vtable_column
-REFERENCING NEW TABLE AS updated
-FOR EACH STATEMENT
-EXECUTE PROCEDURE vtable_trigger_on_update();
-
-DROP TRIGGER IF EXISTS vtable_rebuild_on_delete ON vtable_column;
-CREATE TRIGGER vtable_rebuild_on_delete
-AFTER DELETE
-ON vtable_column
-REFERENCING OLD TABLE AS removed
-FOR EACH STATEMENT
-EXECUTE PROCEDURE vtable_trigger_on_delete();
+COMMIT;
