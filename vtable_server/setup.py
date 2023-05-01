@@ -10,7 +10,7 @@ setup(
     packages = ['vtable_server', 'vtable_server.domain'],
     package_dir = {'vtable_server': 'src'},
     install_requires = [
-        'Flask==1.0.2',
+        'Flask==2.3.2',
         'PyYAML>=4.2b1',
         'psycopg2-binary==2.7.7',
         'flask-sqlalchemy==2.3.2',
