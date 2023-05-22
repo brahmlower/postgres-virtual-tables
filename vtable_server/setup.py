@@ -14,7 +14,7 @@ setup(
         'PyYAML>=4.2b1',
         'psycopg2-binary==2.7.7',
         'flask-sqlalchemy==2.3.2',
-        'requests==2.21.0',
+        'requests==2.31.0',
         'vtable_lib'
     ]
 )
